@@ -1,0 +1,114 @@
+package homework;
+
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.math.BigInteger;
+import java.util.StringTokenizer;
+
+public class SimHash {
+    private String tokens;//放入的文本
+    private BigInteger intSimHash=null;
+    String strSimHash;
+    private int hashbits = 64;
+    public SimHash(String tokens) {
+       this.tokens = tokens;
+       this.intSimHash = this.simHash();
+    }
+    public SimHash(String tokens, int hashbits) {
+       this.tokens = tokens;
+       this.hashbits = hashbits;
+       this.intSimHash = this.simHash();
+    }
+    //simhash算法
+    public BigInteger simHash() {
+       int[] v = new int[this.hashbits];
+       StringTokenizer stringTokens = new StringTokenizer(this.tokens);
+       while (stringTokens.hasMoreTokens()) {
+           String temp = stringTokens.nextToken();
+           BigInteger t = this.hash(temp);
+           for (int i = 0; i < this.hashbits; i++) {
+               BigInteger bitmask = new BigInteger("1").shiftLeft(i);
+                if (t.and(bitmask).signum() != 0) {
+                   v[i] += 1;
+               } else {
+                   v[i] -= 1;
+               }
+           }
+       }
+       BigInteger fingerprint = new BigInteger("0");
+       StringBuffer simHashBuffer = new StringBuffer();
+       for (int i = 0; i < this.hashbits; i++) {
+           if (v[i] >= 0) {
+               fingerprint = fingerprint.add(new BigInteger("1").shiftLeft(i));
+               simHashBuffer.append("1");
+           }else{
+               simHashBuffer.append("0");
+           }
+       }
+       this.strSimHash = simHashBuffer.toString();
+       System.out.println(this.strSimHash + " length " + this.strSimHash.length());
+       return fingerprint;
+    }
+
+    private BigInteger hash(String source) {
+       if (source == null || source.length() == 0) {
+           return new BigInteger("0");
+       } else {
+           char[] sourceArray = source.toCharArray();
+           BigInteger x = BigInteger.valueOf(((long) sourceArray[0]) << 7);
+           BigInteger m = new BigInteger("1000003");
+           BigInteger mask = new BigInteger("2").pow(this.hashbits).subtract(
+                   new BigInteger("1"));
+           for (char item : sourceArray) {
+               BigInteger temp = BigInteger.valueOf((long) item);
+               x = x.multiply(m).xor(temp).and(mask);
+           }
+           x = x.xor(new BigInteger(String.valueOf(source.length())));
+           if (x.equals(new BigInteger("-1"))) {
+               x = new BigInteger("-2");
+           }
+           return x;
+       }
+    }  
+    //海明距离算法
+    public double getDistance(String str1, String str2) { 
+       int distance; 
+           distance = 0; 
+           for (int i = 0; i < str1.length(); i++) { 
+               if (str1.charAt(i) != str2.charAt(i)) { 
+                   distance++; 
+               }   
+       } 
+       return 0.01*(100-distance*100/1024); 
+    } 
+    
+    //文本的输入
+    static  String readTxt(String path) throws IOException {
+    	StringBuffer buffer = new StringBuffer();
+        @SuppressWarnings("resource")
+    	BufferedReader bf= new BufferedReader(new FileReader(path));
+        String s = null;
+        while((s = bf.readLine())!=null){//使用readLine方法，一次读一行
+            buffer.append(s.trim());
+        }
+        String xml = buffer.toString();
+        return xml;
+    }
+    public static void main(String[] args) throws IOException {
+      String s = readTxt(args[0]);
+      SimHash hash1 = new SimHash(s,1024);
+      s = readTxt(args[1]);
+      SimHash hash2 = new SimHash(s,1024);
+      double dis = hash1.getDistance(hash1.strSimHash,hash2.strSimHash);
+      
+      //文本的输出
+      PrintStream ps = new PrintStream(args[2]);
+      //可能会出现异常，直接throws就行了
+      System.setOut(ps);
+      //把创建的打印输出流赋给系统。即系统下次向 ps输出
+      System.out.println("相似率为："+dis);
+      ps.close();
+    }
+}
